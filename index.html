@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TriageAI — Support Ticket Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0C0F1A;
+    --surface: #131728;
+    --surface2: #1A1F35;
+    --surface3: #222840;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #E8EAF6;
+    --text2: #8892B0;
+    --text3: #4A5280;
+    --accent: #6C8EEF;
+    --accent2: #8BA4F5;
+    --green: #34D399;
+    --green-bg: rgba(52,211,153,0.1);
+    --amber: #FBBF24;
+    --amber-bg: rgba(251,191,36,0.1);
+    --red: #F87171;
+    --red-bg: rgba(248,113,113,0.1);
+    --blue: #60A5FA;
+    --blue-bg: rgba(96,165,250,0.1);
+    --purple: #A78BFA;
+    --purple-bg: rgba(167,139,250,0.1);
+    --mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+  
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Layout */
+  .app { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 28px; height: 28px; background: var(--accent);
+    border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .logo-text { font-weight: 600; font-size: 15px; letter-spacing: -0.3px; }
+  .logo-badge {
+    font-size: 10px; font-family: var(--mono); background: var(--accent);
+    color: white; padding: 2px 6px; border-radius: 4px; opacity: 0.8;
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .status-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .status-label { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+
+  .main { display: grid; grid-template-columns: 1fr 420px; gap: 0; flex: 1; min-height: 0; overflow: hidden; }
+
+  /* Left panel */
+  .panel-left { padding: 24px; border-right: 1px solid var(--border); overflow-y: auto; height: 100%; }
+  
+  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .panel-title { font-weight: 600; font-size: 16px; letter-spacing: -0.3px; }
+  .panel-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* Input area */
+  .input-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+  .input-section:focus-within { border-color: var(--accent); }
+
+  .input-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .toolbar-label { font-size: 11px; font-family: var(--mono); color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+  .toolbar-sep { flex: 1; }
+  .sample-btn {
+    font-size: 11px; font-family: var(--mono); color: var(--accent2);
+    background: transparent; border: 1px solid rgba(108,142,239,0.25);
+    padding: 3px 8px; border-radius: 4px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sample-btn:hover { background: rgba(108,142,239,0.1); }
+
+  .input-fields { padding: 14px; }
+  .field-row { margin-bottom: 12px; }
+  .field-label { font-size: 11px; color: var(--text2); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  
+  input[type=text], textarea, select {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 9px 12px; color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; outline: none; resize: none;
+    transition: border-color 0.15s;
+  }
+  input[type=text]:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { line-height: 1.5; min-height: 90px; }
+  select option { background: var(--surface2); }
+
+  .field-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .triage-btn {
+    width: 100%; padding: 12px;
+    background: var(--accent); color: white;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer; letter-spacing: -0.2px;
+    transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .triage-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+  .triage-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+  .triage-btn .spinner {
+    width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.6s linear infinite; display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Queue */
+  .queue-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .ticket-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; cursor: pointer;
+    transition: all 0.15s; position: relative; overflow: hidden;
+  }
+  .ticket-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    border-radius: 3px 0 0 3px;
+  }
+  .ticket-card.p1::before { background: var(--red); }
+  .ticket-card.p2::before { background: var(--amber); }
+  .ticket-card.p3::before { background: var(--blue); }
+  .ticket-card.p4::before { background: var(--text3); }
+  .ticket-card:hover { border-color: var(--border2); background: var(--surface2); }
+  .ticket-card.active { border-color: var(--accent); background: rgba(108,142,239,0.05); }
+
+  .ticket-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .ticket-subject { font-weight: 500; font-size: 13px; line-height: 1.4; }
+  .ticket-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  .badge {
+    font-size: 10px; font-family: var(--mono); font-weight: 500;
+    padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+  }
+  .badge-p1 { background: var(--red-bg); color: var(--red); }
+  .badge-p2 { background: var(--amber-bg); color: var(--amber); }
+  .badge-p3 { background: var(--blue-bg); color: var(--blue); }
+  .badge-p4 { background: rgba(74,82,128,0.2); color: var(--text3); }
+
+  .badge-bug { background: var(--red-bg); color: var(--red); }
+  .badge-billing { background: var(--amber-bg); color: var(--amber); }
+  .badge-feature { background: var(--purple-bg); color: var(--purple); }
+  .badge-onboarding { background: var(--green-bg); color: var(--green); }
+  .badge-account { background: var(--blue-bg); color: var(--blue); }
+  .badge-other { background: rgba(74,82,128,0.2); color: var(--text2); }
+
+  .ticket-from { font-size: 11px; color: var(--text2); }
+  .ticket-preview { font-size: 12px; color: var(--text2); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+  .ticket-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .sentiment-icon { font-size: 12px; }
+
+  /* Right panel */
+  .panel-right { padding: 24px; background: var(--surface); overflow-y: auto; height: 100%; }
+  
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 300px; color: var(--text3); text-align: center; gap: 12px;
+  }
+  .empty-icon { font-size: 36px; opacity: 0.5; }
+
+  .result-header { margin-bottom: 20px; }
+  .result-id { font-size: 11px; font-family: var(--mono); color: var(--text2); margin-bottom: 6px; }
+  .result-subject { font-size: 17px; font-weight: 600; letter-spacing: -0.4px; line-height: 1.3; margin-bottom: 8px; }
+  .result-from { font-size: 12px; color: var(--text2); }
+
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .metric-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .metric-label { font-size: 10px; font-family: var(--mono); color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .metric-value { font-size: 15px; font-weight: 600; }
+  .metric-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .section { margin-bottom: 16px; }
+  .section-title { font-size: 11px; font-family: var(--mono); color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+
+  .reasoning-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; font-size: 12px; color: var(--text2); line-height: 1.6;
+  }
+
+  .response-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text);
+    position: relative;
+  }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 10px; font-family: var(--mono); color: var(--text2);
+    background: var(--surface3); border: 1px solid var(--border);
+    padding: 3px 8px; border-radius: 4px; cursor: pointer;
+  }
+  .copy-btn:hover { color: var(--text); }
+
+  .routing-card {
+    background: rgba(108,142,239,0.07); border: 1px solid rgba(108,142,239,0.2);
+    border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+  }
+  .routing-icon { font-size: 20px; }
+  .routing-team { font-weight: 600; font-size: 14px; }
+  .routing-reason { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .confidence-bar-wrap { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .confidence-bar-bg { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; }
+  .confidence-bar-fill { height: 4px; background: var(--green); border-radius: 2px; transition: width 0.6s ease; }
+  .confidence-num { font-size: 11px; font-family: var(--mono); color: var(--text2); }
+
+  .override-row { display: flex; gap: 6px; margin-top: 8px; }
+  .override-btn {
+    flex: 1; padding: 7px; font-size: 11px; font-family: var(--mono);
+    border-radius: 6px; cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text2); transition: all 0.15s;
+  }
+  .override-btn:hover { background: var(--surface3); color: var(--text); }
+  .override-btn.accept { border-color: rgba(52,211,153,0.3); color: var(--green); }
+  .override-btn.accept:hover { background: var(--green-bg); }
+
+  /* Escalation alert */
+  .escalation-alert {
+    background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25);
+    border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px; font-size: 12px;
+  }
+  .escalation-icon { font-size: 16px; }
+  .escalation-text { color: var(--red); }
+
+  /* Loading overlay for result */
+  .loading-overlay {
+    display: flex; flex-direction: column; gap: 10px; padding: 8px 0;
+  }
+  .skeleton {
+    background: var(--surface2); border-radius: 6px; height: 14px;
+    animation: shimmer 1.2s infinite;
+  }
+  @keyframes shimmer { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex; gap: 16px; margin-bottom: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px;
+  }
+  .stat { text-align: center; flex: 1; }
+  .stat-num { font-size: 20px; font-weight: 600; font-family: var(--mono); }
+  .stat-label { font-size: 10px; color: var(--text2); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .tag { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border); color: var(--text2); }
+
+  /* NEW tag animation */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .new-ticket { animation: fadeIn 0.3s ease; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-text">TriageAI</span>
+      <span class="logo-badge">BETA</span>
+    </div>
+    <div class="topbar-right">
+      <div class="status-dot"></div>
+      <span class="status-label">AI Engine Active</span>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- Left: Queue -->
+    <div class="panel-left">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Support Queue</div>
+          <div class="panel-sub">Incoming tickets — AI triaged in real time</div>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat">
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:var(--red)" id="stat-p1">0</div>
+          <div class="stat-label">Critical</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:var(--green)" id="stat-resolved">0</div>
+          <div class="stat-label">Resolved</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:var(--accent)" id="stat-accuracy">—</div>
+          <div class="stat-label">Accuracy</div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="input-section">
+        <div class="input-toolbar">
+          <span class="toolbar-label">New Ticket</span>
+          <span class="toolbar-sep"></span>
+          <button class="sample-btn" onclick="loadSample(0)">Load sample 1</button>
+          <button class="sample-btn" onclick="loadSample(1)">Load sample 2</button>
+          <button class="sample-btn" onclick="loadSample(2)">Load sample 3</button>
+        </div>
+        <div class="input-fields">
+          <div class="field-row-2">
+            <div class="field-row" style="margin-bottom:0">
+              <div class="field-label">From</div>
+              <input type="text" id="in-from" placeholder="customer@company.com">
+            </div>
+            <div class="field-row" style="margin-bottom:0">
+              <div class="field-label">Plan</div>
+              <select id="in-plan">
+                <option>Free</option>
+                <option selected>Pro</option>
+                <option>Business</option>
+                <option>Enterprise</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row" style="margin-top:10px">
+            <div class="field-label">Subject</div>
+            <input type="text" id="in-subject" placeholder="Brief description of the issue">
+          </div>
+          <div class="field-row">
+            <div class="field-label">Message</div>
+            <textarea id="in-body" placeholder="Paste the full ticket message here..."></textarea>
+          </div>
+          <button class="triage-btn" id="triage-btn" onclick="runTriage()">
+            <div class="spinner" id="spinner"></div>
+            <span id="btn-text">⚡ Triage this ticket</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Queue list -->
+      <div class="queue-list" id="queue"></div>
+    </div>
+
+    <!-- Right: Result -->
+    <div class="panel-right" id="panel-right">
+      <div class="empty-state">
+        <div class="empty-icon">🎯</div>
+        <div style="font-weight:500">No ticket selected</div>
+        <div style="font-size:12px;color:var(--text3);max-width:200px">Submit a ticket above or click a queued ticket to see AI triage results</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SAMPLES = [
+  {
+    from: "sarah.chen@acmecorp.com",
+    plan: "Enterprise",
+    subject: "URGENT: API down in production - all requests failing with 503",
+    body: "Our entire production system has been down for 45 minutes. Every API call is returning 503. We have 3,000 active users affected right now and our DevOps team cannot identify the issue on our end. We've checked our infrastructure - everything looks fine. This is costing us approximately $50,000/hour in lost revenue. We need someone on this immediately. This has NEVER happened before in our 2 years with you."
+  },
+  {
+    from: "mark.johnson@startup.io",
+    plan: "Pro",
+    subject: "Question about upgrading my plan",
+    body: "Hi team, I'm currently on the Pro plan and I'm wondering what the process is for upgrading to Business. Specifically I want to know: 1) What additional features do I get? 2) Can I keep my current billing date? 3) Is there a discount if I pay annually? Thanks in advance, been loving the product so far."
+  },
+  {
+    from: "frustrated.user@gmail.com",
+    plan: "Free",
+    subject: "Export feature is completely broken and I've been waiting 3 weeks!!",
+    body: "I submitted a ticket THREE WEEKS AGO about the export feature not working and nobody has gotten back to me. I've tried everything - different browsers, clearing cache, reinstalling the app. The export button does absolutely nothing. I have 200 records I need to export for a client presentation TOMORROW MORNING. If this isn't fixed today I'm cancelling and going to your competitor. This is absolutely unacceptable customer service."
+  }
+];
+
+let tickets = [];
+let accepts = 0;
+let totalTriaged = 0;
+
+function loadSample(i) {
+  const s = SAMPLES[i];
+  document.getElementById('in-from').value = s.from;
+  document.getElementById('in-plan').value = s.plan;
+  document.getElementById('in-subject').value = s.subject;
+  document.getElementById('in-body').value = s.body;
+}
+
+async function runTriage() {
+  const from = document.getElementById('in-from').value.trim();
+  const plan = document.getElementById('in-plan').value;
+  const subject = document.getElementById('in-subject').value.trim();
+  const body = document.getElementById('in-body').value.trim();
+
+  if (!subject || !body) {
+    alert('Please enter at least a subject and message body.');
+    return;
+  }
+
+  const btn = document.getElementById('triage-btn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  btnText.textContent = 'Analysing ticket...';
+
+  // Show loading state in right panel
+  showLoading();
+
+  const ticketId = 'TKT-' + Math.floor(1000 + Math.random() * 9000);
+  const now = new Date();
+
+  try {
+    const prompt = `You are a senior customer support triage specialist. Analyse the following support ticket and return ONLY a valid JSON object with this exact structure (no markdown, no explanation):
+
+{
+  "category": one of ["Bug", "Billing", "Feature Request", "Onboarding", "Account", "Other"],
+  "priority": one of ["P1", "P2", "P3", "P4"],
+  "priority_label": one of ["Critical", "High", "Medium", "Low"],
+  "sentiment": one of ["Positive", "Neutral", "Frustrated", "Urgent"],
+  "escalation_risk": one of ["Low", "Medium", "High"],
+  "routing_team": short team name like "Tier 2 Engineering", "Billing Support", "Customer Success", "Tier 1 Support", "Technical Support",
+  "routing_reason": one sentence explaining why this team,
+  "confidence": number between 0.0 and 1.0,
+  "reasoning": 2-3 sentences explaining your priority and category decision,
+  "suggested_response": a professional, empathetic first response to the customer (2-4 sentences, personalised to their specific issue, use their first name if extractable from email, do not use placeholders like [Name])
+}
+
+Priority guidelines:
+- P1 (Critical): Production down, data loss, security breach, revenue impact, Enterprise customers with urgent issues
+- P2 (High): Significant feature broken, Business/Pro customers, time-sensitive, escalation risk
+- P3 (Medium): Non-critical bug, general questions, Pro plan
+- P4 (Low): Feature requests, general inquiries, Free plan non-urgent
+
+Ticket details:
+From: ${from || 'Unknown'}
+Plan: ${plan}
+Subject: ${subject}
+Message: ${body}`;
+
+    let result;
+    let usedFallback = false;
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      clearTimeout(timeout);
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      const rawText = data.content.map(b => b.text || '').join('');
+
+      try {
+        const clean = rawText.replace(/```json\n?|\n?```/g, '').trim();
+        result = JSON.parse(clean);
+      } catch(e) {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) result = JSON.parse(jsonMatch[0]);
+        else throw new Error('Could not parse AI response');
+      }
+    } catch(apiErr) {
+      // Fallback: rule-based triage so the demo always works
+      usedFallback = true;
+      result = ruleTriage(subject, body, plan);
+    }
+
+    const ticket = {
+      id: ticketId,
+      from: from || 'Unknown',
+      plan,
+      subject,
+      body,
+      usedFallback,
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      ...result
+    };
+
+    tickets.unshift(ticket);
+    totalTriaged++;
+    renderQueue();
+    showResult(ticket);
+
+    // Clear inputs
+    document.getElementById('in-subject').value = '';
+    document.getElementById('in-body').value = '';
+
+  } catch(err) {
+    console.error(err);
+    document.getElementById('panel-right').innerHTML = `
+      <div style="padding:20px;background:var(--red-bg);border:1px solid rgba(248,113,113,0.25);border-radius:10px;font-size:13px;">
+        <strong style="color:var(--red)">Something went wrong</strong><br><br>
+        <span style="color:var(--text2)">${err.message}</span>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent = '⚡ Triage this ticket';
+  }
+}
+
+// Rule-based fallback triage — runs when API is unavailable
+function ruleTriage(subject, body, plan) {
+  const text = (subject + ' ' + body).toLowerCase();
+
+  // Category
+  let category = 'Other';
+  if (/down|outage|crash|error|bug|broken|fail|exception|500|503|not work/.test(text)) category = 'Bug';
+  else if (/bill|invoice|charge|payment|refund|subscription|price|plan|upgrade|cost/.test(text)) category = 'Billing';
+  else if (/feature|request|wish|would be great|suggest|add|improvement/.test(text)) category = 'Feature Request';
+  else if (/onboard|setup|start|begin|how do i|getting started|tutorial|guide/.test(text)) category = 'Onboarding';
+  else if (/account|login|password|access|permission|locked|profile/.test(text)) category = 'Account';
+
+  // Priority
+  let priority = 'P3', priority_label = 'Medium';
+  const urgentWords = /urgent|critical|production|down|immediately|emergency|asap|revenue|losing|broken|cannot|can't|not working/.test(text);
+  const angryWords = /unacceptable|terrible|awful|worst|cancel|refund|hate|frustrated|angry|disappointed/.test(text);
+  const waitedWords = /week|days|hours|waiting|still|again|ignored|no response/.test(text);
+
+  if (plan === 'Enterprise' && urgentWords) { priority = 'P1'; priority_label = 'Critical'; }
+  else if ((plan === 'Enterprise') || (urgentWords && (plan === 'Business' || plan === 'Pro'))) { priority = 'P2'; priority_label = 'High'; }
+  else if (angryWords || waitedWords) { priority = 'P2'; priority_label = 'High'; }
+  else if (plan === 'Free' && !urgentWords) { priority = 'P4'; priority_label = 'Low'; }
+
+  // Sentiment
+  let sentiment = 'Neutral';
+  if (/urgent|asap|immediately|emergency|critical/.test(text)) sentiment = 'Urgent';
+  else if (/love|great|awesome|thank|happy|good|perfect/.test(text)) sentiment = 'Positive';
+  else if (angryWords || waitedWords || /frustrated|annoyed|disappointed/.test(text)) sentiment = 'Frustrated';
+
+  // Escalation risk
+  let escalation_risk = 'Low';
+  if ((sentiment === 'Frustrated' && (plan === 'Enterprise' || plan === 'Business')) || (waitedWords && angryWords)) escalation_risk = 'High';
+  else if (sentiment === 'Frustrated' || (priority === 'P1' || priority === 'P2')) escalation_risk = 'Medium';
+
+  // Routing
+  const routingMap = {
+    'Bug': { team: 'Tier 2 Engineering', reason: 'Technical issue requiring engineering investigation.' },
+    'Billing': { team: 'Billing Support', reason: 'Payment or subscription query for the billing team.' },
+    'Feature Request': { team: 'Product Team', reason: 'Feature suggestion to be logged and reviewed by product.' },
+    'Onboarding': { team: 'Customer Success', reason: 'Setup assistance best handled by the onboarding team.' },
+    'Account': { team: 'Tier 1 Support', reason: 'Account access issue for the support team.' },
+    'Other': { team: 'Tier 1 Support', reason: 'General enquiry routed to front-line support.' }
+  };
+  const routing = routingMap[category];
+
+  const firstName = 'there';
+  const catResponses = {
+    'Bug': `Hi ${firstName}, thanks for reaching out. I can see you're experiencing a technical issue and I want to get this resolved for you as quickly as possible. I've flagged this to our engineering team with high priority and you'll hear back shortly with an update.`,
+    'Billing': `Hi ${firstName}, thanks for getting in touch about your billing. I've pulled up your account and will look into this right away — I'll have a clear answer for you very soon.`,
+    'Feature Request': `Hi ${firstName}, thank you for this suggestion — feedback like yours genuinely shapes our roadmap. I've logged this as a feature request and passed it to our product team for review.`,
+    'Onboarding': `Hi ${firstName}, happy to help you get set up! I've assigned your request to our onboarding team who will walk you through everything step by step.`,
+    'Account': `Hi ${firstName}, I understand you're having trouble accessing your account. I've escalated this to our support team and we'll get you back in as soon as possible.`,
+    'Other': `Hi ${firstName}, thanks for reaching out. I've received your message and passed it to the right team — someone will be in touch with you very shortly.`
+  };
+
+  return {
+    category,
+    priority,
+    priority_label,
+    sentiment,
+    escalation_risk,
+    routing_team: routing.team,
+    routing_reason: routing.reason,
+    confidence: 0.72,
+    reasoning: `Classified as ${category} based on keyword analysis of the subject and message body. Priority set to ${priority} (${priority_label}) considering the customer's ${plan} plan and the ${sentiment.toLowerCase()} tone of the message. Escalation risk assessed as ${escalation_risk}.`,
+    suggested_response: catResponses[category]
+  };
+}
+
+function showLoading() {
+  document.getElementById('panel-right').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div class="skeleton" style="width:40%;height:11px;margin-bottom:8px"></div>
+      <div class="skeleton" style="width:80%;height:18px;margin-bottom:6px"></div>
+      <div class="skeleton" style="width:50%;height:11px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      ${[1,2,3,4].map(()=>`<div class="skeleton" style="height:68px;border-radius:8px"></div>`).join('')}
+    </div>
+    <div class="skeleton" style="height:11px;width:40%;margin-bottom:8px"></div>
+    <div class="skeleton" style="height:80px;border-radius:8px;margin-bottom:16px"></div>
+    <div class="skeleton" style="height:11px;width:40%;margin-bottom:8px"></div>
+    <div class="skeleton" style="height:120px;border-radius:8px"></div>
+  `;
+}
+
+function showResult(t) {
+  const priColor = { P1: 'var(--red)', P2: 'var(--amber)', P3: 'var(--blue)', P4: 'var(--text3)' }[t.priority];
+  const sentEmoji = { Positive: '😊', Neutral: '😐', Frustrated: '😤', Urgent: '🚨' }[t.sentiment] || '😐';
+  const confPct = Math.round((t.confidence || 0.85) * 100);
+
+  let html = '';
+
+  if (t.usedFallback) {
+    html += `<div style="background:var(--amber-bg);border:1px solid rgba(251,191,36,0.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:12px;color:var(--amber);">
+      ⚡ <span><strong>Rule-based triage</strong> — AI API unavailable, using built-in logic. Results are still useful for demo purposes.</span>
+    </div>`;
+  }
+
+  if (t.escalation_risk === 'High') {
+    html += `<div class="escalation-alert">
+      <span class="escalation-icon">🚨</span>
+      <span class="escalation-text"><strong>High escalation risk.</strong> This customer may churn. Consider personal outreach from Customer Success.</span>
+    </div>`;
+  }
+
+  html += `
+    <div class="result-header">
+      <div class="result-id">${t.id} · ${t.time} · ${t.plan} Plan</div>
+      <div class="result-subject">${t.subject}</div>
+      <div class="result-from">${t.from}</div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Priority</div>
+        <div class="metric-value" style="color:${priColor}">${t.priority} — ${t.priority_label}</div>
+        <div class="metric-sub">SLA: ${{ P1:'1hr', P2:'4hr', P3:'24hr', P4:'72hr' }[t.priority]}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Category</div>
+        <div class="metric-value">${t.category}</div>
+        <div class="metric-sub">Auto-classified</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Sentiment</div>
+        <div class="metric-value">${sentEmoji} ${t.sentiment}</div>
+        <div class="metric-sub">Customer tone</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Escalation Risk</div>
+        <div class="metric-value" style="color:${{ High:'var(--red)', Medium:'var(--amber)', Low:'var(--green)' }[t.escalation_risk]}">${t.escalation_risk}</div>
+        <div class="metric-sub">Churn signal</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">AI Confidence</div>
+      <div class="confidence-bar-wrap">
+        <div class="confidence-bar-bg"><div class="confidence-bar-fill" style="width:${confPct}%;background:${confPct > 80 ? 'var(--green)' : confPct > 60 ? 'var(--amber)' : 'var(--red)'}"></div></div>
+        <span class="confidence-num">${confPct}%</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Routing Recommendation</div>
+      <div class="routing-card">
+        <span class="routing-icon">→</span>
+        <div>
+          <div class="routing-team">${t.routing_team}</div>
+          <div class="routing-reason">${t.routing_reason}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Reasoning</div>
+      <div class="reasoning-box">${t.reasoning}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Suggested First Response</div>
+      <div class="response-box">
+        <button class="copy-btn" onclick="copyResponse('${t.id}')">Copy</button>
+        <div id="response-text-${t.id}">${t.suggested_response}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Agent Action</div>
+      <div class="override-row">
+        <button class="override-btn accept" onclick="acceptTriage('${t.id}')">✓ Accept triage</button>
+        <button class="override-btn" onclick="overridePriority('${t.id}')">↕ Override priority</button>
+        <button class="override-btn" onclick="reroute('${t.id}')">⇄ Reroute</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('panel-right').innerHTML = html;
+  // Trigger bar animation
+  setTimeout(() => {
+    const bar = document.querySelector('.confidence-bar-fill');
+    if (bar) bar.style.width = confPct + '%';
+  }, 50);
+}
+
+function copyResponse(id) {
+  const el = document.getElementById('response-text-' + id);
+  if (el) navigator.clipboard.writeText(el.textContent).catch(()=>{});
+  const btn = document.querySelector('.copy-btn');
+  if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500); }
+}
+
+function acceptTriage(id) {
+  accepts++;
+  totalTriaged = Math.max(totalTriaged, tickets.length);
+  updateStats();
+  const btn = document.querySelector('.override-btn.accept');
+  if (btn) { btn.textContent = '✓ Accepted'; btn.disabled = true; }
+}
+
+function overridePriority(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  const newP = prompt('Set priority (P1/P2/P3/P4):', t.priority);
+  if (newP && ['P1','P2','P3','P4'].includes(newP.toUpperCase())) {
+    t.priority = newP.toUpperCase();
+    renderQueue();
+    showResult(t);
+  }
+}
+
+function reroute(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  const team = prompt('Assign to team:', t.routing_team);
+  if (team) { t.routing_team = team; showResult(t); }
+}
+
+function renderQueue() {
+  const qEl = document.getElementById('queue');
+  if (tickets.length === 0) { qEl.innerHTML = ''; return; }
+
+  qEl.innerHTML = tickets.map(t => {
+    const catClass = 'badge-' + t.category.toLowerCase().replace(' request','').replace(' ','');
+    const sentEmoji = { Positive: '😊', Neutral: '😐', Frustrated: '😤', Urgent: '🚨' }[t.sentiment] || '😐';
+    return `<div class="ticket-card ${t.priority.toLowerCase()} new-ticket" onclick="selectTicket('${t.id}')">
+      <div class="ticket-head">
+        <div class="ticket-subject">${t.subject}</div>
+        <div class="ticket-meta">
+          <span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span>
+          <span class="badge ${catClass}">${t.category}</span>
+        </div>
+      </div>
+      <div class="ticket-from">${t.from || 'Unknown'} · ${t.plan} · ${t.time}</div>
+      <div class="ticket-preview">${t.body.substring(0, 90)}...</div>
+      <div class="ticket-foot">
+        <span class="sentiment-icon">${sentEmoji}</span>
+        <span class="tag">${t.routing_team}</span>
+        ${t.escalation_risk === 'High' ? '<span class="tag" style="color:var(--red);border-color:rgba(248,113,113,0.3)">⚠ High risk</span>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  updateStats();
+}
+
+function selectTicket(id) {
+  const t = tickets.find(x => x.id === id);
+  if (t) showResult(t);
+  document.querySelectorAll('.ticket-card').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.ticket-card').forEach(c => {
+    if (c.onclick.toString().includes(id)) c.classList.add('active');
+  });
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = tickets.length;
+  document.getElementById('stat-p1').textContent = tickets.filter(t => t.priority === 'P1').length;
+  document.getElementById('stat-resolved').textContent = accepts;
+  if (totalTriaged > 0) {
+    document.getElementById('stat-accuracy').textContent = Math.round((accepts / totalTriaged) * 100) + '%';
+  }
+}
+</script>
+</body>
+</html>
